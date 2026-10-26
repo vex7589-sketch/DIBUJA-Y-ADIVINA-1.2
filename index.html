@@ -4,83 +4,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
   <title>Dibuja y Adivina</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #111827;
-      color: white;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-    }
-    main {
-      width: 100%;
-      max-width: 650px;
-      text-align: center;
-      background: #1f2937;
-      padding: 32px 20px;
-      border-radius: 22px;
-      border: 1px solid #374151;
-    }
-    h1 { font-size: 36px; margin-bottom: 8px; }
-    p { color: #cbd5e1; line-height: 1.5; }
-    .emoji { font-size: 55px; }
-    .buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 25px;
-    }
-    button {
-      padding: 15px 22px;
-      border: 0;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      background: #8b5cf6;
-      color: white;
-    }
-    button:hover { filter: brightness(1.15); }
-    .secondary { background: #374151; }
-    #status {
-      margin-top: 22px;
-      padding: 14px;
-      background: #111827;
-      border-radius: 12px;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
+  <script src="game.js" defer></script>
 </head>
 <body>
   <main>
-    <div class="emoji">🎨</div>
-    <h1>Dibuja y Adivina</h1>
-    <p>¡Dibuja la palabra secreta y deja que tu amigo la adivine!</p>
+    <header class="text-center">
+      <h1>🎨 Dibuja y Adivina</h1>
+      <p>¡Demuestra tu creatividad y descubre la palabra secreta!</p>
+    </header>
 
-    <div class="buttons">
-      <button onclick="chooseRole('draw')">✏️ Quiero dibujar</button>
-      <button class="secondary" onclick="chooseRole('guess')">💡 Quiero adivinar</button>
-    </div>
+    <section class="card">
+      <h2>Únete a la diversión</h2>
+      <p>Selecciona cómo quieres comenzar.</p>
 
-    <div id="status">¡Prepárate para jugar!</div>
+      <div class="buttons">
+        <button onclick="Game.chooseRole('draw')">
+          ✏️ Quiero dibujar
+        </button>
+        <button class="secondary" onclick="Game.chooseRole('guess')">
+          💡 Quiero adivinar
+        </button>
+      </div>
+
+      <div id="status" class="status">
+        ¡Prepárate para jugar!
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="game-header">
+        <h2>Tu espacio de dibujo</h2>
+        <div id="timer" class="timer">01:00</div>
+      </div>
+
+      <p class="secret-word">TU PALABRA ES: (pendiente)</p>
+
+      <div class="drawing-tools">
+        <div class="color-palette">
+          <button class="color-button selected" data-color="#000000"
+            style="background:#000000" aria-label="Negro"></button>
+          <button class="color-button" data-color="#ffffff"
+            style="background:#ffffff" aria-label="Blanco"></button>
+          <button class="color-button" data-color="#ef4444"
+            style="background:#ef4444" aria-label="Rojo"></button>
+          <button class="color-button" data-color="#eab308"
+            style="background:#eab308" aria-label="Amarillo"></button>
+          <button class="color-button" data-color="#22c55e"
+            style="background:#22c55e" aria-label="Verde"></button>
+          <button class="color-button" data-color="#a855f7"
+            style="background:#a855f7" aria-label="Morado"></button>
+        </div>
+
+        <label class="brush-size">
+          Grosor
+          <input id="brushSize" type="range" min="1" max="30" value="5">
+        </label>
+
+        <button id="clearCanvas" class="danger">🧹 Limpiar</button>
+      </div>
+
+      <div class="canvas-container">
+        <canvas id="drawingCanvas"></canvas>
+      </div>
+    </section>
+
+    <footer class="text-center" style="padding:24px">
+      <p>Juego en desarrollo · ¡Que gane el más creativo!</p>
+    </footer>
   </main>
-
-  <script>
-    function chooseRole(role) {
-      const status = document.getElementById('status');
-
-      if (role === 'draw') {
-        status.textContent = '¡Pronto podrás dibujar! Estamos preparando tu partida.';
-      } else {
-        status.textContent = '¡Pronto podrás adivinar! Estamos preparando tu partida.';
-      }
-    }
-  </script>
 </body>
 </html>
