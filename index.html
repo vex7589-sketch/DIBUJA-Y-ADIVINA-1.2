@@ -7,40 +7,42 @@
   <meta name="theme-color" content="#0f172a">
   <title>Dibuja y Adivina</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="game.js" defer></script>
 </head>
 <body>
   <main>
     <header class="text-center">
       <h1>🎨 Dibuja y Adivina</h1>
-      <p>¡Demuestra tu creatividad y descubre la palabra secreta!</p>
+      <p>¡Dibuja, adivina y diviértete con tus amigos!</p>
     </header>
 
     <section class="card">
-      <h2>Únete a la diversión</h2>
-      <p>Selecciona cómo quieres comenzar.</p>
+      <h2>🎮 Crear o unirse a una partida</h2>
+      <p>Cada jugador debe abrir el juego en su propio dispositivo.</p>
 
       <div class="buttons">
-        <button onclick="Game.chooseRole('draw')">
-          ✏️ Quiero dibujar
-        </button>
-        <button class="secondary" onclick="Game.chooseRole('guess')">
-          💡 Quiero adivinar
-        </button>
+        <button id="createGame">✨ Crear partida</button>
       </div>
 
-      <div id="status" class="status">
-        ¡Prepárate para jugar!
+      <div class="join-area">
+        <label for="roomCode">Código de la partida</label>
+        <input id="roomCode" type="text" maxlength="6"
+          placeholder="Escribe el código" autocomplete="off">
+        <button id="joinGame" class="secondary">🚀 Unirme</button>
       </div>
+
+      <p id="status" class="status">¡Listos para jugar!</p>
+      <p id="roomDisplay" class="secret-word"></p>
     </section>
 
     <section class="card">
       <div class="game-header">
-        <h2>Tu espacio de dibujo</h2>
+        <h2 id="gameTitle">Tu espacio de juego</h2>
         <div id="timer" class="timer">01:00</div>
       </div>
 
-      <p class="secret-word">TU PALABRA ES: (pendiente)</p>
+      <p id="secretWord" class="secret-word">TU PALABRA ES: —</p>
 
       <div class="drawing-tools">
         <div class="color-palette">
@@ -69,10 +71,21 @@
       <div class="canvas-container">
         <canvas id="drawingCanvas"></canvas>
       </div>
+
+      <div id="guessArea" class="join-area">
+        <label for="guessInput">¿Qué palabra está dibujando?</label>
+        <input id="guessInput" type="text"
+          placeholder="Escribe tu respuesta" autocomplete="off">
+        <button id="submitGuess">💡 Adivinar</button>
+      </div>
+
+      <div class="buttons">
+        <button id="swapRoles" class="secondary">🔄 Intercambiar puestos</button>
+      </div>
     </section>
 
     <footer class="text-center" style="padding:24px">
-      <p>Juego en desarrollo · ¡Que gane el más creativo!</p>
+      <p>¡Que gane el más creativo!</p>
     </footer>
   </main>
 </body>
