@@ -1,11 +1,14 @@
 "use strict";
 
-// ==========================================
+// ======================================================
 // SUPABASE
-// ==========================================
+// ======================================================
 
-const SUPABASE_URL = "https://yejubbxolhudirnqxzch.supabase.co";
-const SUPABASE_KEY = "sb_publishable_-Co6Xer2naHTUKUbWbUgRg_jixXaJOh";
+const SUPABASE_URL =
+  "https://yejubbxolhudirnqxzch.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_-Co6Xer2naHTUKUbWbUgRg_jixXaJOh";
 
 const db = window.supabase.createClient(
   SUPABASE_URL,
@@ -13,9 +16,9 @@ const db = window.supabase.createClient(
 );
 
 
-// ==========================================
+// ======================================================
 // PALABRAS
-// ==========================================
+// ======================================================
 
 const WORDS = [
   "gato",
@@ -37,79 +40,97 @@ const WORDS = [
   "fútbol",
   "coche",
   "helado",
-  "playa"
+  "playa",
+  "avión",
+  "robot",
+  "celular",
+  "reloj",
+  "hamburguesa"
 ];
 
 
-// ==========================================
+// ======================================================
 // JUEGO
-// ==========================================
+// ======================================================
 
 const Game = {
 
-  playerId: "",
+  playerId: null,
+
   room: null,
+
   role: null,
 
   channel: null,
 
   canvas: null,
+
   ctx: null,
 
-  color: "#000000",
-  brush: 5,
-  tool: "pen",
-
   drawing: false,
+
   lastPoint: null,
 
+  color: "#000000",
+
+  brush: 5,
+
+  tool: "pen",
+
   timer: null,
-  seconds: 60,
 
   processingGuess: false,
-  processingSwap: false,
+
+  processingRound: false,
 
   currentRound: 0,
-  lastFeedback: "",
 
-  remoteDrawing: false,
   lastSnapshot: "",
 
+  remoteDrawing: false,
 
-  // ========================================
+
+  // ====================================================
   // INICIAR
-  // ========================================
+  // ====================================================
 
   async init() {
 
     this.playerId =
-      crypto.randomUUID?.() ||
-      Math.random().toString(36).substring(2) +
-      Date.now();
+      crypto.randomUUID
+        ? crypto.randomUUID()
+        : Math.random()
+            .toString(36)
+            .substring(2) +
+          Date.now();
 
     this.canvas =
       document.getElementById("drawingCanvas");
 
-    this.ctx =
-      this.canvas.getContext("2d");
+    if (this.canvas) {
 
-    this.prepareCanvas();
+      this.ctx =
+        this.canvas.getContext("2d");
 
-    this.setupDrawing();
+      this.prepareCanvas();
+
+      this.setupDrawing();
+    }
 
     this.setupControls();
 
     this.updateTimerDisplay(60);
 
-    this.setStatus(
-      "Crea una partida o únete usando un código."
+    console.log(
+      "Juego iniciado:",
+      this.playerId
     );
   },
 
 
-  // ========================================
-  // MENSAJES
-  // ========================================
+  // ====================================================
+  // UTILIDADES
+  // ====================================================
 
   setStatus(message) {
 
@@ -125,29 +146,50 @@ const Game = {
   setFeedback(message, correct = null) {
 
     const element =
-      document.getElementById("guessFeedback");
+      document.getElementById(
+        "guessFeedback"
+      );
 
     if (!element) return;
 
-    element.textContent = message;
+    element.textContent =
+      message || "";
 
     if (correct === true) {
-      element.style.color = "#16a34a";
-    }
-    else if (correct === false) {
-      element.style.color = "#dc2626";
-    }
-    else {
+
+      element.style.color =
+        "#16a34a";
+
+    } else if (correct === false) {
+
+      element.style.color =
+        "#dc2626";
+
+    } else {
+
       element.style.color = "";
     }
   },
 
 
-  // ========================================
+  getRandomWord() {
+
+    return WORDS[
+      Math.floor(
+        Math.random() *
+        WORDS.length
+      )
+    ];
+  },
+
+
+  // ====================================================
   // CANVAS
-  // ========================================
+  // ====================================================
 
   prepareCanvas() {
+
+    if (!this.canvas) return;
 
     const rect =
       this.canvas.getBoundingClientRect();
@@ -156,10 +198,14 @@ const Game = {
       window.devicePixelRatio || 1;
 
     this.canvas.width =
-      Math.round(rect.width * ratio);
+      Math.round(
+        rect.width * ratio
+      );
 
     this.canvas.height =
-      Math.round(rect.height * ratio);
+      Math.round(
+        rect.height * ratio
+      );
 
     this.ctx.setTransform(
       ratio,
@@ -171,6 +217,7 @@ const Game = {
     );
 
     this.ctx.lineCap = "round";
+
     this.ctx.lineJoin = "round";
 
     this.clearLocalCanvas();
@@ -183,42 +230,15 @@ const Game = {
       this.canvas.getBoundingClientRect();
 
     return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+
+      x:
+        event.clientX -
+        rect.left,
+
+      y:
+        event.clientY -
+        rect.top
     };
-  },
-
-
-  drawDot(point, color, brush, tool = "pen") {
-
-    this.ctx.save();
-
-    if (tool === "eraser") {
-
-      this.ctx.globalCompositeOperation =
-        "destination-out";
-
-    } else {
-
-      this.ctx.globalCompositeOperation =
-        "source-over";
-    }
-
-    this.ctx.beginPath();
-
-    this.ctx.fillStyle = color;
-
-    this.ctx.arc(
-      point.x,
-      point.y,
-      brush / 2,
-      0,
-      Math.PI * 2
-    );
-
-    this.ctx.fill();
-
-    this.ctx.restore();
   },
 
 
@@ -227,7 +247,7 @@ const Game = {
     to,
     color,
     brush,
-    tool = "pen"
+    tool
   ) {
 
     if (!from || !to) return;
@@ -247,8 +267,11 @@ const Game = {
 
     this.ctx.beginPath();
 
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = brush;
+    this.ctx.strokeStyle =
+      color;
+
+    this.ctx.lineWidth =
+      brush;
 
     this.ctx.moveTo(
       from.x,
@@ -266,19 +289,61 @@ const Game = {
   },
 
 
-  // ========================================
+  drawDot(
+    point,
+    color,
+    brush,
+    tool
+  ) {
+
+    this.ctx.save();
+
+    if (tool === "eraser") {
+
+      this.ctx.globalCompositeOperation =
+        "destination-out";
+
+    } else {
+
+      this.ctx.globalCompositeOperation =
+        "source-over";
+    }
+
+    this.ctx.beginPath();
+
+    this.ctx.fillStyle =
+      color;
+
+    this.ctx.arc(
+      point.x,
+      point.y,
+      brush / 2,
+      0,
+      Math.PI * 2
+    );
+
+    this.ctx.fill();
+
+    this.ctx.restore();
+  },
+
+
+  // ====================================================
   // DIBUJAR
-  // ========================================
+  // ====================================================
 
   setupDrawing() {
 
+    if (!this.canvas) return;
+
+
     this.canvas.addEventListener(
       "pointerdown",
-      async event => {
+      event => {
 
         if (
-          this.role !== "drawer" ||
           !this.room ||
+          this.role !== "drawer" ||
           this.room.status !== "playing"
         ) {
           return;
@@ -293,22 +358,8 @@ const Game = {
         this.lastPoint =
           this.getPoint(event);
 
-        const payload = {
-
-          kind: "start",
-
-          x: this.lastPoint.x,
-          y: this.lastPoint.y,
-
-          color: this.color,
-
-          brush: this.brush,
-
-          tool: this.tool
-        };
-
         this.drawDot(
-          payload,
+          this.lastPoint,
           this.color,
           this.brush,
           this.tool
@@ -320,8 +371,18 @@ const Game = {
 
           event: "stroke",
 
-          payload
+          payload: {
 
+            kind: "start",
+
+            point: this.lastPoint,
+
+            color: this.color,
+
+            brush: this.brush,
+
+            tool: this.tool
+          }
         });
       }
     );
@@ -343,30 +404,13 @@ const Game = {
         const point =
           this.getPoint(event);
 
-        const payload = {
-
-          kind: "move",
-
-          from: this.lastPoint,
-
-          to: point,
-
-          color: this.color,
-
-          brush: this.brush,
-
-          tool: this.tool
-        };
-
         this.drawLine(
-          payload.from,
-          payload.to,
-          payload.color,
-          payload.brush,
-          payload.tool
+          this.lastPoint,
+          point,
+          this.color,
+          this.brush,
+          this.tool
         );
-
-        this.lastPoint = point;
 
         this.channel?.send({
 
@@ -374,9 +418,29 @@ const Game = {
 
           event: "stroke",
 
-          payload
+          payload: {
 
+            kind: "move",
+
+            from:
+              this.lastPoint,
+
+            to:
+              point,
+
+            color:
+              this.color,
+
+            brush:
+              this.brush,
+
+            tool:
+              this.tool
+          }
         });
+
+        this.lastPoint =
+          point;
       }
     );
 
@@ -410,22 +474,13 @@ const Game = {
   },
 
 
-  // ========================================
+  // ====================================================
   // CREAR PARTIDA
-  // ========================================
+  // ====================================================
 
   async createGame() {
 
     try {
-
-      if (this.room) {
-
-        this.setStatus(
-          "Ya estás dentro de una partida."
-        );
-
-        return;
-      }
 
       const code =
         Math.random()
@@ -434,46 +489,61 @@ const Game = {
           .toUpperCase();
 
       const word =
-        WORDS[
-          Math.floor(
-            Math.random() * WORDS.length
-          )
-        ];
+        this.getRandomWord();
+
 
       const { data, error } =
         await db
           .from("games")
           .insert({
 
-            room_code: code,
+            room_code:
+              code,
 
-            status: "waiting",
+            status:
+              "waiting",
 
             drawer_id:
               this.playerId,
 
-            guesser_id: null,
+            guesser_id:
+              null,
 
-            secret_word: word,
+            secret_word:
+              word,
 
-            drawing: "",
+            drawing:
+              "",
 
-            time_left: 60,
+            time_left:
+              60,
 
-            round_started_at: null,
+            round_started_at:
+              null,
 
-            guess_feedback: null,
+            guess_feedback:
+              null,
 
-            guess_correct: false,
+            guess_correct:
+              false,
 
-            round_version: 1
+            round_version:
+              1,
+
+            drawer_score:
+              0,
+
+            guesser_score:
+              0
 
           })
           .select()
           .single();
 
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
 
       this.room = data;
@@ -489,10 +559,8 @@ const Game = {
       this.updateUI();
 
       this.setStatus(
-        "Partida creada. Comparte el código con el otro jugador."
+        "Partida creada. Comparte el código."
       );
-
-      this.setFeedback("");
 
     }
     catch (error) {
@@ -500,34 +568,27 @@ const Game = {
       console.error(error);
 
       this.setStatus(
-        "Error al crear partida: " +
-        error.message
+        "Error al crear la partida."
       );
     }
   },
 
 
-  // ========================================
+  // ====================================================
   // UNIRSE
-  // ========================================
+  // ====================================================
 
   async joinGame() {
 
     try {
 
-      if (this.room) {
-
-        this.setStatus(
-          "Ya estás dentro de una partida."
+      const input =
+        document.getElementById(
+          "roomCode"
         );
 
-        return;
-      }
-
       const code =
-        document
-          .getElementById("roomCode")
-          .value
+        input?.value
           .trim()
           .toUpperCase();
 
@@ -542,21 +603,26 @@ const Game = {
       }
 
 
-      const { data, error } =
+      const { data: room, error } =
         await db
           .from("games")
           .select("*")
-          .eq("room_code", code)
+          .eq(
+            "room_code",
+            code
+          )
           .maybeSingle();
 
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
 
-      if (!data) {
+      if (!room) {
 
         this.setStatus(
-          "No encontramos esa partida."
+          "No existe esa partida."
         );
 
         return;
@@ -564,8 +630,8 @@ const Game = {
 
 
       if (
-        data.status !== "waiting" ||
-        data.guesser_id
+        room.guesser_id ||
+        room.status !== "waiting"
       ) {
 
         this.setStatus(
@@ -576,11 +642,14 @@ const Game = {
       }
 
 
-      const startTime =
+      const start =
         new Date().toISOString();
 
 
-      const { data: updated, error: updateError } =
+      const {
+        data: updated,
+        error: updateError
+      } =
         await db
           .from("games")
           .update({
@@ -592,21 +661,24 @@ const Game = {
               "playing",
 
             round_started_at:
-              startTime,
+              start,
 
             time_left:
-              60,
-
-            guess_feedback:
-              null,
-
-            guess_correct:
-              false
+              60
 
           })
-          .eq("room_code", code)
-          .eq("status", "waiting")
-          .is("guesser_id", null)
+          .eq(
+            "room_code",
+            code
+          )
+          .eq(
+            "status",
+            "waiting"
+          )
+          .is(
+            "guesser_id",
+            null
+          )
           .select()
           .maybeSingle();
 
@@ -619,7 +691,7 @@ const Game = {
       if (!updated) {
 
         this.setStatus(
-          "La partida acaba de ser ocupada."
+          "Otro jugador acaba de entrar."
         );
 
         return;
@@ -638,17 +710,13 @@ const Game = {
 
       this.updateUI();
 
-      this.setFeedback("");
-
-      this.setStatus(
-        "¡Te has unido! ¡Empieza la ronda!"
-      );
-
-
       this.startTimer(
         updated.round_started_at
       );
 
+      this.setStatus(
+        "¡Partida iniciada!"
+      );
 
     }
     catch (error) {
@@ -656,31 +724,22 @@ const Game = {
       console.error(error);
 
       this.setStatus(
-        "Error al unirse: " +
-        error.message
+        "Error al unirse a la partida."
       );
     }
   },
 
 
-  // ========================================
-  // CONEXIÓN EN TIEMPO REAL
-  // ========================================
+  // ====================================================
+  // SUPABASE REALTIME
+  // ====================================================
 
   async connectRoom() {
 
     if (!this.room) return;
 
 
-    // IMPORTANTE:
-    // Solo creamos la conexión una vez
-    // para evitar que el intercambio
-    // deje la pantalla cargando.
-
-    if (
-      this.channel &&
-      this.channel.state === "joined"
-    ) {
+    if (this.channel) {
 
       return;
     }
@@ -688,50 +747,41 @@ const Game = {
 
     this.channel =
       db.channel(
-        "room-" +
-        this.room.room_code,
-
-        {
-          config: {
-            broadcast: {
-              self: false
-            }
-          }
-        }
+        "game-" +
+        this.room.room_code
       );
 
 
-    // -----------------------------
-    // TRAZOS
-    // -----------------------------
+    // --------------------------------
+    // DIBUJO EN TIEMPO REAL
+    // --------------------------------
 
     this.channel.on(
       "broadcast",
-      { event: "stroke" },
-
+      {
+        event: "stroke"
+      },
       ({ payload }) => {
 
         if (
-          this.role === "drawer"
+          this.role !== "guesser"
         ) {
           return;
         }
+
 
         if (
           payload.kind === "start"
         ) {
 
           this.drawDot(
-            payload,
+            payload.point,
             payload.color,
             payload.brush,
             payload.tool
           );
 
-        }
-        else if (
-          payload.kind === "move"
-        ) {
+        } else {
 
           this.drawLine(
             payload.from,
@@ -745,18 +795,19 @@ const Game = {
     );
 
 
-    // -----------------------------
-    // LIMPIAR TODO
-    // -----------------------------
+    // --------------------------------
+    // LIMPIAR
+    // --------------------------------
 
     this.channel.on(
       "broadcast",
-      { event: "clear" },
-
+      {
+        event: "clear"
+      },
       () => {
 
         if (
-          this.role !== "drawer"
+          this.role === "guesser"
         ) {
 
           this.clearLocalCanvas();
@@ -765,116 +816,57 @@ const Game = {
     );
 
 
-    // -----------------------------
-    // SNAPSHOT
-    // -----------------------------
-
-    this.channel.on(
-      "broadcast",
-      { event: "snapshot" },
-
-      ({ payload }) => {
-
-        if (
-          this.role !== "drawer" &&
-          payload?.image
-        ) {
-
-          this.loadSnapshot(
-            payload.image
-          );
-        }
-      }
-    );
-
-
-    // -----------------------------
+    // --------------------------------
     // RESULTADO
-    // -----------------------------
+    // --------------------------------
 
     this.channel.on(
       "broadcast",
-      { event: "guess_result" },
-
+      {
+        event: "guess_result"
+      },
       ({ payload }) => {
 
         this.setFeedback(
           payload.message,
           payload.correct
         );
-
-        if (payload.correct) {
-
-          this.setStatus(
-            "🎉 ¡Respuesta correcta!"
-          );
-        }
       }
     );
 
 
-    // -----------------------------
-    // CAMBIO DE RONDA
-    // -----------------------------
+    // --------------------------------
+    // NUEVA RONDA
+    // --------------------------------
 
     this.channel.on(
       "broadcast",
-      { event: "new_round" },
-
+      {
+        event: "new_round"
+      },
       ({ payload }) => {
 
-        this.room =
-          payload.room;
-
-        this.role =
-          payload.room.drawer_id ===
-          this.playerId
-            ? "drawer"
-            : "guesser";
-
-        this.currentRound =
-          payload.room.round_version;
-
-        this.clearLocalCanvas();
-
-        this.lastSnapshot = "";
-
-        this.setFeedback("");
-
-        this.updateUI();
-
-        this.startTimer(
-          payload.room.round_started_at
-        );
-
-        this.setStatus(
-          this.role === "drawer"
-            ? "🎨 ¡Te toca dibujar!"
-            : "👀 ¡Te toca adivinar!"
+        this.applyNewRound(
+          payload.room
         );
       }
     );
 
 
-    // -----------------------------
-    // CAMBIO DE ESTADO EN SUPABASE
-    // -----------------------------
+    // --------------------------------
+    // CAMBIOS EN SUPABASE
+    // --------------------------------
 
     this.channel.on(
       "postgres_changes",
-
       {
         event: "UPDATE",
-
         schema: "public",
-
         table: "games",
-
         filter:
           "room_code=eq." +
           this.room.room_code
       },
-
       ({ new: updated }) => {
 
         this.handleRoomUpdate(
@@ -884,29 +876,21 @@ const Game = {
     );
 
 
-    // -----------------------------
-    // SUSCRIBIR
-    // -----------------------------
-
     this.channel.subscribe(
       status => {
 
-        if (
-          status === "SUBSCRIBED"
-        ) {
-
-          console.log(
-            "Conectado a la sala"
-          );
-        }
+        console.log(
+          "Realtime:",
+          status
+        );
       }
     );
   },
 
 
-  // ========================================
-  // ACTUALIZAR SALA
-  // ========================================
+  // ====================================================
+  // ACTUALIZAR PARTIDA
+  // ====================================================
 
   handleRoomUpdate(updated) {
 
@@ -920,67 +904,44 @@ const Game = {
     this.room = updated;
 
 
-    this.role =
+    if (
       updated.drawer_id ===
       this.playerId
-        ? "drawer"
-        : updated.guesser_id ===
-          this.playerId
-          ? "guesser"
-          : null;
+    ) {
+
+      this.role =
+        "drawer";
+
+    } else if (
+      updated.guesser_id ===
+      this.playerId
+    ) {
+
+      this.role =
+        "guesser";
+    }
 
 
     this.currentRound =
       updated.round_version;
 
 
-    // -----------------------------
-    // NUEVA RONDA
-    // -----------------------------
+    // Nueva ronda
 
     if (
       oldRound !==
       updated.round_version
     ) {
 
-      this.clearLocalCanvas();
-
-      this.lastSnapshot = "";
-
-      this.setFeedback("");
-
-      this.startTimer(
-        updated.round_started_at
+      this.applyNewRound(
+        updated
       );
+
+      return;
     }
 
 
-    // -----------------------------
-    // TIMER
-    // -----------------------------
-
-    if (
-      updated.status === "playing" &&
-      updated.round_started_at
-    ) {
-
-      this.startTimer(
-        updated.round_started_at
-      );
-    }
-
-
-    if (
-      updated.status === "finished"
-    ) {
-
-      this.stopTimer();
-    }
-
-
-    // -----------------------------
-    // FEEDBACK
-    // -----------------------------
+    // Feedback
 
     if (
       updated.guess_feedback
@@ -993,9 +954,7 @@ const Game = {
     }
 
 
-    // -----------------------------
-    // DIBUJO
-    // -----------------------------
+    // Dibujo guardado
 
     if (
       updated.drawing &&
@@ -1008,13 +967,81 @@ const Game = {
     }
 
 
+    // Temporizador
+
+    if (
+      updated.status === "playing" &&
+      updated.round_started_at
+    ) {
+
+      this.startTimer(
+        updated.round_started_at
+      );
+    }
+
+
     this.updateUI();
   },
 
 
-  // ========================================
+  // ====================================================
+  // NUEVA RONDA
+  // ====================================================
+
+  applyNewRound(room) {
+
+    if (!room) return;
+
+
+    this.room = room;
+
+
+    this.role =
+      room.drawer_id ===
+      this.playerId
+        ? "drawer"
+        : "guesser";
+
+
+    this.currentRound =
+      room.round_version;
+
+
+    this.clearLocalCanvas();
+
+    this.lastSnapshot = "";
+
+    this.setFeedback("");
+
+
+    this.updateUI();
+
+
+    this.startTimer(
+      room.round_started_at
+    );
+
+
+    if (
+      this.role === "drawer"
+    ) {
+
+      this.setStatus(
+        "🎨 ¡Te toca dibujar!"
+      );
+
+    } else {
+
+      this.setStatus(
+        "🧠 ¡Te toca adivinar!"
+      );
+    }
+  },
+
+
+  // ====================================================
   // GUARDAR DIBUJO
-  // ========================================
+  // ====================================================
 
   async saveSnapshot() {
 
@@ -1047,7 +1074,6 @@ const Game = {
       payload: {
         image
       }
-
     });
 
 
@@ -1076,9 +1102,9 @@ const Game = {
   },
 
 
-  // ========================================
+  // ====================================================
   // CARGAR DIBUJO
-  // ========================================
+  // ====================================================
 
   loadSnapshot(image) {
 
@@ -1162,15 +1188,59 @@ const Game = {
   },
 
 
-  // ========================================
+  // ====================================================
+  // BORRADOR
+  // ====================================================
+
+  activateEraser() {
+
+    if (
+      this.role !== "drawer"
+    ) {
+      return;
+    }
+
+
+    this.tool =
+      "eraser";
+
+
+    document
+      .querySelectorAll(
+        "[data-color]"
+      )
+      .forEach(button => {
+
+        button.classList.remove(
+          "selected"
+        );
+      });
+
+
+    document
+      .getElementById(
+        "eraserTool"
+      )
+      ?.classList.add(
+        "selected"
+      );
+
+
+    this.setStatus(
+      "🧽 Borrador activado."
+    );
+  },
+
+
+  // ====================================================
   // LIMPIAR TODO
-  // ========================================
+  // ====================================================
 
   async clearCanvas() {
 
     if (
-      this.role !== "drawer" ||
-      !this.room
+      !this.room ||
+      this.role !== "drawer"
     ) {
 
       return;
@@ -1189,7 +1259,6 @@ const Game = {
       event: "clear",
 
       payload: {}
-
     });
 
 
@@ -1203,7 +1272,6 @@ const Game = {
       !this.canvas ||
       !this.ctx
     ) {
-
       return;
     }
 
@@ -1242,14 +1310,15 @@ const Game = {
   },
 
 
-  // ========================================
-  // RESPUESTA
-  // ========================================
+  // ====================================================
+  // ADIVINAR
+  // ====================================================
 
   async submitGuess() {
 
     if (
       this.processingGuess ||
+      this.processingRound ||
       !this.room ||
       this.role !== "guesser" ||
       this.room.status !== "playing"
@@ -1266,15 +1335,23 @@ const Game = {
 
 
     const answer =
-      input.value
+      input?.value
         .trim()
         .toLocaleLowerCase("es");
 
 
-    if (!answer) return;
+    if (!answer) {
+
+      this.setStatus(
+        "Escribe una respuesta."
+      );
+
+      return;
+    }
 
 
-    this.processingGuess = true;
+    this.processingGuess =
+      true;
 
 
     try {
@@ -1288,23 +1365,73 @@ const Game = {
           .toLocaleLowerCase("es");
 
 
-      const message =
-        correct
-          ? "🎉 ¡CORRECTO! ¡Adivinaste la palabra!"
-          : "❌ Incorrecto. ¡Inténtalo nuevamente!";
+      // --------------------------------
+      // INCORRECTO
+      // --------------------------------
+
+      if (!correct) {
+
+        const message =
+          "❌ Incorrecto. ¡Inténtalo nuevamente!";
 
 
-      // Mostrar inmediatamente
-      // al jugador que respondió.
+        this.setFeedback(
+          message,
+          false
+        );
+
+
+        this.channel?.send({
+
+          type: "broadcast",
+
+          event: "guess_result",
+
+          payload: {
+
+            message,
+
+            correct: false
+          }
+        });
+
+
+        await db
+          .from("games")
+          .update({
+
+            guess_feedback:
+              message,
+
+            guess_correct:
+              false
+
+          })
+          .eq(
+            "room_code",
+            this.room.room_code
+          )
+          .eq(
+            "status",
+            "playing"
+          );
+
+
+        input.value = "";
+
+        return;
+      }
+
+
+      // --------------------------------
+      // CORRECTO
+      // --------------------------------
 
       this.setFeedback(
-        message,
-        correct
+        "🎉 ¡CORRECTO!",
+        true
       );
 
-
-      // Enviar inmediatamente
-      // al otro jugador.
 
       this.channel?.send({
 
@@ -1314,193 +1441,17 @@ const Game = {
 
         payload: {
 
-          message,
+          message:
+            "🎉 ¡CORRECTO! ¡Adivinaste!",
 
-          correct
-
+          correct: true
         }
-
       });
 
 
-      if (!correct) {
-
-        const { error } =
-          await db
-            .from("games")
-            .update({
-
-              guess_feedback:
-                message,
-
-              guess_correct:
-                false
-
-            })
-            .eq(
-              "room_code",
-              this.room.room_code
-            )
-            .eq(
-              "status",
-              "playing"
-            );
-
-
-        if (error) {
-          console.error(error);
-        }
-
-
-        input.value = "";
-
-        return;
-      }
-
-
-      // ==================================
-      // RESPUESTA CORRECTA
-      // ==================================
-
-      const newWord =
-        WORDS[
-          Math.floor(
-            Math.random() *
-            WORDS.length
-          )
-        ];
-
-
-      const nextRound =
-        Number(
-          this.room.round_version || 1
-        ) + 1;
-
-
-      const newStart =
-        new Date().toISOString();
-
-
-      // Quien estaba adivinando
-      // pasa a dibujar.
-
-      const newDrawer =
-        this.room.guesser_id;
-
-
-      const newGuesser =
-        this.room.drawer_id;
-
-
-      const { data, error } =
-        await db
-          .from("games")
-          .update({
-
-            drawer_id:
-              newDrawer,
-
-            guesser_id:
-              newGuesser,
-
-            secret_word:
-              newWord,
-
-            drawing:
-              "",
-
-            status:
-              "playing",
-
-            time_left:
-              60,
-
-            round_started_at:
-              newStart,
-
-            guess_feedback:
-              message,
-
-            guess_correct:
-              true,
-
-            round_version:
-              nextRound
-
-          })
-          .eq(
-            "room_code",
-            this.room.room_code
-          )
-          .eq(
-            "round_version",
-            this.room.round_version
-          )
-          .select()
-          .maybeSingle();
-
-
-      if (error) throw error;
-
-
-      if (!data) {
-
-        this.setStatus(
-          "La ronda cambió. Espera un momento."
-        );
-
-        return;
-      }
-
-
-      this.room =
-        data;
-
-
-      this.role =
-        this.playerId ===
-        data.drawer_id
-          ? "drawer"
-          : "guesser";
-
-
-      this.currentRound =
-        data.round_version;
-
-
-      // Actualizar inmediatamente
-      // al jugador que acertó.
-
-      this.clearLocalCanvas();
-
-      this.setFeedback(
-        "🎉 ¡CORRECTO! Nueva ronda.",
-        true
+      await this.finishRound(
+        "guesser"
       );
-
-      this.updateUI();
-
-      this.startTimer(
-        data.round_started_at
-      );
-
-
-      // Avisar al otro dispositivo.
-
-      this.channel?.send({
-
-        type: "broadcast",
-
-        event: "new_round",
-
-        payload: {
-          room: data
-        }
-
-      });
-
-
-      input.value = "";
 
 
     }
@@ -1509,7 +1460,7 @@ const Game = {
       console.error(error);
 
       this.setStatus(
-        "Error al procesar la respuesta."
+        "Error al comprobar la respuesta."
       );
 
     }
@@ -1521,88 +1472,102 @@ const Game = {
   },
 
 
-  // ========================================
-  // INTERCAMBIAR PUESTOS
-  // ========================================
+  // ====================================================
+  // FINALIZAR RONDA
+  // ====================================================
 
-  async swapRoles() {
+  async finishRound(winner) {
 
     if (
-      this.processingSwap ||
+      this.processingRound ||
       !this.room
     ) {
-
       return;
     }
 
 
-    if (
-      !this.room.guesser_id
-    ) {
-
-      this.setStatus(
-        "Esperen a que se una el segundo jugador."
-      );
-
-      return;
-    }
-
-
-    if (
-      this.room.status !== "playing"
-    ) {
-
-      this.setStatus(
-        "La ronda no está activa."
-      );
-
-      return;
-    }
-
-
-    this.processingSwap =
+    this.processingRound =
       true;
-
-
-    const swapButton =
-      document.getElementById(
-        "swapRoles"
-      );
-
-
-    if (swapButton) {
-      swapButton.disabled = true;
-    }
 
 
     try {
 
-      const newDrawer =
-        this.room.guesser_id;
+      const oldRoom =
+        this.room;
 
+
+      let drawerScore =
+        Number(
+          oldRoom.drawer_score || 0
+        );
+
+      let guesserScore =
+        Number(
+          oldRoom.guesser_score || 0
+        );
+
+
+      // El ganador recibe un punto
+
+      if (
+        winner === "drawer"
+      ) {
+
+        drawerScore++;
+
+      } else if (
+        winner === "guesser"
+      ) {
+
+        guesserScore++;
+      }
+
+
+      // --------------------------------
+      // INTERCAMBIO AUTOMÁTICO
+      // --------------------------------
+
+      const newDrawer =
+        oldRoom.guesser_id;
 
       const newGuesser =
-        this.room.drawer_id;
+        oldRoom.drawer_id;
 
 
       const newWord =
-        WORDS[
-          Math.floor(
-            Math.random() *
-            WORDS.length
-          )
-        ];
+        this.getRandomWord();
 
 
       const nextRound =
         Number(
-          this.room.round_version || 1
+          oldRoom.round_version || 1
         ) + 1;
 
 
-      const newStart =
+      const start =
         new Date().toISOString();
 
+
+      let feedback;
+
+
+      if (
+        winner === "guesser"
+      ) {
+
+        feedback =
+          "🎉 ¡El adivinador acertó! +1 punto.";
+
+      } else {
+
+        feedback =
+          "⏰ Se acabó el tiempo. ¡El dibujante gana +1 punto!";
+      }
+
+
+      // --------------------------------
+      // ACTUALIZAR SUPABASE
+      // --------------------------------
 
       const { data, error } =
         await db
@@ -1628,46 +1593,46 @@ const Game = {
               60,
 
             round_started_at:
-              newStart,
+              start,
 
             guess_feedback:
-              null,
+              feedback,
 
             guess_correct:
-              false,
+              winner === "guesser",
 
             round_version:
-              nextRound
+              nextRound,
+
+            drawer_score:
+              drawerScore,
+
+            guesser_score:
+              guesserScore
 
           })
           .eq(
             "room_code",
-            this.room.room_code
+            oldRoom.room_code
           )
           .eq(
             "round_version",
-            this.room.round_version
+            oldRoom.round_version
           )
           .select()
           .maybeSingle();
 
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
 
       if (!data) {
 
-        this.setStatus(
-          "El cambio ya fue realizado. Actualizando..."
-        );
-
         return;
       }
 
-
-      // NO cerramos el canal.
-      // Esto evita que ambas pantallas
-      // queden cargando.
 
       this.room =
         data;
@@ -1699,7 +1664,7 @@ const Game = {
       );
 
 
-      // Avisar directamente al otro jugador.
+      // Avisar al otro jugador
 
       this.channel?.send({
 
@@ -1710,15 +1675,220 @@ const Game = {
         payload: {
           room: data
         }
-
       });
 
 
-      this.setStatus(
+      if (
         this.role === "drawer"
-          ? "🔄 ¡Ahora dibujas tú!"
-          : "🔄 ¡Ahora te toca adivinar!"
+      ) {
+
+        this.setStatus(
+          feedback +
+          " 🔄 ¡Ahora dibujas tú!"
+        );
+
+      } else {
+
+        this.setStatus(
+          feedback +
+          " 🔄 ¡Ahora te toca adivinar!"
+        );
+      }
+
+    }
+    catch (error) {
+
+      console.error(
+        "Error terminando ronda:",
+        error
       );
+
+    }
+    finally {
+
+      this.processingRound =
+        false;
+    }
+  },
+
+
+  // ====================================================
+  // INTERCAMBIO MANUAL
+  // ====================================================
+
+  async swapRoles() {
+
+    if (
+      !this.room ||
+      this.processingRound
+    ) {
+      return;
+    }
+
+
+    if (
+      !this.room.guesser_id
+    ) {
+
+      this.setStatus(
+        "Esperen a que entre el segundo jugador."
+      );
+
+      return;
+    }
+
+
+    if (
+      this.room.status !== "playing"
+    ) {
+
+      return;
+    }
+
+
+    // El intercambio manual
+    // NO suma puntos.
+
+    await this.changeRoles();
+  },
+
+
+  async changeRoles() {
+
+    if (
+      this.processingRound
+    ) {
+      return;
+    }
+
+
+    this.processingRound =
+      true;
+
+
+    try {
+
+      const oldRoom =
+        this.room;
+
+
+      const newDrawer =
+        oldRoom.guesser_id;
+
+      const newGuesser =
+        oldRoom.drawer_id;
+
+
+      const newWord =
+        this.getRandomWord();
+
+
+      const nextRound =
+        Number(
+          oldRoom.round_version || 1
+        ) + 1;
+
+
+      const start =
+        new Date().toISOString();
+
+
+      const { data, error } =
+        await db
+          .from("games")
+          .update({
+
+            drawer_id:
+              newDrawer,
+
+            guesser_id:
+              newGuesser,
+
+            secret_word:
+              newWord,
+
+            drawing:
+              "",
+
+            status:
+              "playing",
+
+            time_left:
+              60,
+
+            round_started_at:
+              start,
+
+            guess_feedback:
+              null,
+
+            guess_correct:
+              false,
+
+            round_version:
+              nextRound
+
+          })
+          .eq(
+            "room_code",
+            oldRoom.room_code
+          )
+          .eq(
+            "round_version",
+            oldRoom.round_version
+          )
+          .select()
+          .maybeSingle();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      if (!data) {
+        return;
+      }
+
+
+      this.room =
+        data;
+
+
+      this.role =
+        this.playerId ===
+        data.drawer_id
+          ? "drawer"
+          : "guesser";
+
+
+      this.currentRound =
+        data.round_version;
+
+
+      this.clearLocalCanvas();
+
+      this.lastSnapshot = "";
+
+      this.setFeedback("");
+
+      this.updateUI();
+
+      this.startTimer(
+        data.round_started_at
+      );
+
+
+      this.channel?.send({
+
+        type: "broadcast",
+
+        event: "new_round",
+
+        payload: {
+          room: data
+        }
+      });
 
 
     }
@@ -1727,29 +1897,182 @@ const Game = {
       console.error(error);
 
       this.setStatus(
-        "No se pudieron intercambiar los puestos: " +
-        error.message
+        "No se pudieron intercambiar los puestos."
       );
 
     }
     finally {
 
-      this.processingSwap =
+      this.processingRound =
         false;
-
-      if (swapButton) {
-
-        swapButton.disabled =
-          !this.room?.guesser_id ||
-          this.room?.status !== "playing";
-      }
     }
   },
 
 
-  // ========================================
+  // ====================================================
+  // TEMPORIZADOR
+  // ====================================================
+
+  startTimer(startedAt) {
+
+    this.stopTimer();
+
+
+    if (!startedAt) {
+
+      this.updateTimerDisplay(60);
+
+      return;
+    }
+
+
+    const startTime =
+      new Date(
+        startedAt
+      ).getTime();
+
+
+    if (
+      !Number.isFinite(
+        startTime
+      )
+    ) {
+      return;
+    }
+
+
+    const tick = () => {
+
+      const elapsed =
+        Math.floor(
+          (
+            Date.now() -
+            startTime
+          ) / 1000
+        );
+
+
+      const remaining =
+        Math.max(
+          0,
+          60 - elapsed
+        );
+
+
+      this.updateTimerDisplay(
+        remaining
+      );
+
+
+      if (
+        remaining <= 0
+      ) {
+
+        this.stopTimer();
+
+        this.handleTimeUp();
+      }
+    };
+
+
+    tick();
+
+
+    this.timer =
+      setInterval(
+        tick,
+        250
+      );
+  },
+
+
+  stopTimer() {
+
+    if (this.timer) {
+
+      clearInterval(
+        this.timer
+      );
+
+      this.timer = null;
+    }
+  },
+
+
+  updateTimerDisplay(seconds) {
+
+    const timer =
+      document.getElementById(
+        "timer"
+      );
+
+
+    if (!timer) return;
+
+
+    const minutes =
+      Math.floor(
+        seconds / 60
+      );
+
+
+    const secs =
+      seconds % 60;
+
+
+    timer.textContent =
+      String(minutes)
+        .padStart(2, "0") +
+      ":" +
+      String(secs)
+        .padStart(2, "0");
+
+
+    timer.classList.toggle(
+      "urgent",
+      seconds <= 10
+    );
+  },
+
+
+  // ====================================================
+  // CUANDO LLEGA A 0
+  // ====================================================
+
+  async handleTimeUp() {
+
+    if (
+      !this.room ||
+      this.room.status !== "playing"
+    ) {
+      return;
+    }
+
+
+    // Solo el dibujante procesa
+    // el final para evitar doble punto.
+
+    if (
+      this.role !== "drawer"
+    ) {
+
+      this.setStatus(
+        "⏰ ¡Se acabó el tiempo!"
+      );
+
+      return;
+    }
+
+
+    await this.finishRound(
+      "drawer"
+    );
+  },
+
+
+  // ====================================================
   // ACTUALIZAR INTERFAZ
-  // ========================================
+  // ====================================================
 
   updateUI() {
 
@@ -1765,7 +2088,7 @@ const Game = {
     if (roomDisplay) {
 
       roomDisplay.textContent =
-        "Código de partida: " +
+        "Código: " +
         this.room.room_code;
     }
 
@@ -1816,16 +2139,54 @@ const Game = {
     }
 
 
-    // Canvas
+    if (this.canvas) {
 
-    this.canvas.style.pointerEvents =
+      this.canvas.style.pointerEvents =
+        this.role === "drawer" &&
+        this.room.status === "playing"
+          ? "auto"
+          : "none";
+    }
+
+
+    // -----------------------------
+    // PUNTUACIÓN
+    // -----------------------------
+
+    const drawerScore =
+      document.getElementById(
+        "drawerScore"
+      );
+
+
+    const guesserScore =
+      document.getElementById(
+        "guesserScore"
+      );
+
+
+    if (drawerScore) {
+
+      drawerScore.textContent =
+        this.room.drawer_score || 0;
+    }
+
+
+    if (guesserScore) {
+
+      guesserScore.textContent =
+        this.room.guesser_score || 0;
+    }
+
+
+    // -----------------------------
+    // CONTROLES DE DIBUJO
+    // -----------------------------
+
+    const canDraw =
       this.role === "drawer" &&
-      this.room.status === "playing"
-        ? "auto"
-        : "none";
+      this.room.status === "playing";
 
-
-    // Herramientas
 
     document
       .querySelectorAll(
@@ -1834,8 +2195,7 @@ const Game = {
       .forEach(button => {
 
         button.disabled =
-          this.role !== "drawer" ||
-          this.room.status !== "playing";
+          !canDraw;
       });
 
 
@@ -1848,22 +2208,7 @@ const Game = {
     if (brushSize) {
 
       brushSize.disabled =
-        this.role !== "drawer" ||
-        this.room.status !== "playing";
-    }
-
-
-    const clearButton =
-      document.getElementById(
-        "clearCanvas"
-      );
-
-
-    if (clearButton) {
-
-      clearButton.disabled =
-        this.role !== "drawer" ||
-        this.room.status !== "playing";
+        !canDraw;
     }
 
 
@@ -1876,241 +2221,48 @@ const Game = {
     if (eraser) {
 
       eraser.disabled =
-        this.role !== "drawer" ||
-        this.room.status !== "playing";
-
-      eraser.classList.toggle(
-        "selected",
-        this.tool === "eraser"
-      );
+        !canDraw;
     }
 
 
-    const swapButton =
+    const clear =
+      document.getElementById(
+        "clearCanvas"
+      );
+
+
+    if (clear) {
+
+      clear.disabled =
+        !canDraw;
+    }
+
+
+    const swap =
       document.getElementById(
         "swapRoles"
       );
 
 
-    if (swapButton) {
+    if (swap) {
 
-      swapButton.disabled =
+      swap.disabled =
         !this.room.guesser_id ||
         this.room.status !== "playing";
     }
   },
 
 
-  // ========================================
-  // TEMPORIZADOR SINCRONIZADO
-  // ========================================
-
-  startTimer(startedAt) {
-
-    this.stopTimer();
-
-
-    if (!startedAt) {
-
-      this.seconds = 60;
-
-      this.updateTimerDisplay(
-        this.seconds
-      );
-
-      return;
-    }
-
-
-    const startTime =
-      new Date(startedAt).getTime();
-
-
-    if (
-      !Number.isFinite(startTime)
-    ) {
-
-      return;
-    }
-
-
-    const update = () => {
-
-      const elapsed =
-        Math.floor(
-          (Date.now() - startTime) /
-          1000
-        );
-
-
-      const remaining =
-        Math.max(
-          0,
-          60 - elapsed
-        );
-
-
-      this.seconds =
-        remaining;
-
-
-      this.updateTimerDisplay(
-        remaining
-      );
-
-
-      if (remaining <= 0) {
-
-        this.stopTimer();
-
-        this.handleTimeUp();
-      }
-    };
-
-
-    update();
-
-
-    // Cada 250 ms para que
-    // ambas pantallas se vean fluidas.
-
-    this.timer =
-      setInterval(
-        update,
-        250
-      );
-  },
-
-
-  stopTimer() {
-
-    if (this.timer) {
-
-      clearInterval(
-        this.timer
-      );
-
-      this.timer = null;
-    }
-  },
-
-
-  updateTimerDisplay(seconds) {
-
-    const timer =
-      document.getElementById(
-        "timer"
-      );
-
-
-    if (!timer) return;
-
-
-    timer.textContent =
-      String(
-        Math.floor(seconds / 60)
-      ).padStart(2, "0") +
-      ":" +
-      String(
-        seconds % 60
-      ).padStart(2, "0");
-
-
-    timer.classList.toggle(
-      "urgent",
-      seconds <= 10
-    );
-  },
-
-
-  // ========================================
-  // FIN DEL TIEMPO
-  // ========================================
-
-  async handleTimeUp() {
-
-    if (
-      !this.room ||
-      this.room.status !== "playing"
-    ) {
-
-      return;
-    }
-
-
-    // Solo el dibujante actual
-    // cambia el estado para evitar
-    // dos actualizaciones simultáneas.
-
-    if (
-      this.role !== "drawer"
-    ) {
-
-      this.setStatus(
-        "⏰ ¡Se acabó el tiempo!"
-      );
-
-      return;
-    }
-
-
-    const { error } =
-      await db
-        .from("games")
-        .update({
-
-          status:
-            "finished",
-
-          time_left:
-            0,
-
-          guess_feedback:
-            "⏰ ¡Se acabó el tiempo!",
-
-          guess_correct:
-            false
-
-        })
-        .eq(
-          "room_code",
-          this.room.room_code
-        )
-        .eq(
-          "status",
-          "playing"
-        );
-
-
-    if (error) {
-
-      console.error(
-        error
-      );
-
-      return;
-    }
-
-
-    this.setStatus(
-      "⏰ ¡Se acabó el tiempo!"
-    );
-
-    this.setFeedback(
-      "⏰ ¡Se acabó el tiempo!",
-      false
-    );
-  },
-
-
-  // ========================================
+  // ====================================================
   // CONTROLES
-  // ========================================
+  // ====================================================
 
   setupControls() {
 
     document
-      .getElementById("createGame")
+      .getElementById(
+        "createGame"
+      )
       ?.addEventListener(
         "click",
         () => this.createGame()
@@ -2118,7 +2270,9 @@ const Game = {
 
 
     document
-      .getElementById("joinGame")
+      .getElementById(
+        "joinGame"
+      )
       ?.addEventListener(
         "click",
         () => this.joinGame()
@@ -2126,7 +2280,9 @@ const Game = {
 
 
     document
-      .getElementById("submitGuess")
+      .getElementById(
+        "submitGuess"
+      )
       ?.addEventListener(
         "click",
         () => this.submitGuess()
@@ -2134,16 +2290,18 @@ const Game = {
 
 
     document
-      .getElementById("swapRoles")
+      .getElementById(
+        "swapRoles"
+      )
       ?.addEventListener(
         "click",
         () => this.swapRoles()
       );
 
 
-    // -----------------------------
+    // --------------------------------
     // COLORES
-    // -----------------------------
+    // --------------------------------
 
     document
       .querySelectorAll(
@@ -2187,9 +2345,9 @@ const Game = {
       });
 
 
-    // -----------------------------
+    // --------------------------------
     // GROSOR
-    // -----------------------------
+    // --------------------------------
 
     document
       .getElementById(
@@ -2207,9 +2365,9 @@ const Game = {
       );
 
 
-    // -----------------------------
+    // --------------------------------
     // BORRADOR
-    // -----------------------------
+    // --------------------------------
 
     document
       .getElementById(
@@ -2217,48 +2375,13 @@ const Game = {
       )
       ?.addEventListener(
         "click",
-        () => {
-
-          if (
-            this.role !== "drawer"
-          ) return;
-
-
-          this.tool =
-            "eraser";
-
-
-          document
-            .querySelectorAll(
-              "[data-color]"
-            )
-            .forEach(item => {
-
-              item.classList.remove(
-                "selected"
-              );
-            });
-
-
-          document
-            .getElementById(
-              "eraserTool"
-            )
-            ?.classList.add(
-              "selected"
-            );
-
-
-          this.setStatus(
-            "🧽 Borrador activado."
-          );
-        }
+        () => this.activateEraser()
       );
 
 
-    // -----------------------------
+    // --------------------------------
     // LIMPIAR TODO
-    // -----------------------------
+    // --------------------------------
 
     document
       .getElementById(
@@ -2270,9 +2393,9 @@ const Game = {
       );
 
 
-    // -----------------------------
-    // ENTER PARA ADIVINAR
-    // -----------------------------
+    // --------------------------------
+    // ENTER
+    // --------------------------------
 
     document
       .getElementById(
@@ -2294,11 +2417,12 @@ const Game = {
 };
 
 
-// ==========================================
-// INICIAR JUEGO
-// ==========================================
+// ======================================================
+// INICIAR
+// ======================================================
 
 window.Game = Game;
+
 
 if (
   document.readyState ===
@@ -2310,8 +2434,7 @@ if (
     () => Game.init()
   );
 
-}
-else {
+} else {
 
   Game.init();
 }
