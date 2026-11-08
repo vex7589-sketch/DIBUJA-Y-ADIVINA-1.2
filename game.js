@@ -1675,8 +1675,8 @@ const Game = {
       throw new Error("No hay un usuario autenticado para guardar el punto.");
     }
 
-    // El jugador ganador ejecuta esta función desde su propia sesión.
-    // Así se respeta la política RLS de profiles (auth.uid() = id).
+    // El jugador ganador actualiza únicamente su propio perfil.
+    // Se solicita la fila actualizada para confirmar que Supabase guardó el punto.
     const { data: profile, error: readError } = await db
       .from("profiles")
       .select("total_points")
@@ -1687,14 +1687,30 @@ const Game = {
 
     const nextTotal = Number(profile.total_points || 0) + 1;
 
-    const { error: updateError } = await db
+    const { data: savedProfile, error: updateError } = await db
       .from("profiles")
       .update({ total_points: nextTotal })
-      .eq("id", this.playerId);
+      .eq("id", this.playerId)
+      .select("total_points")
+      .single();
 
     if (updateError) throw updateError;
+    if (!savedProfile) {
+      throw new Error("Supabase no confirmó la actualización de los puntos del perfil.");
+    }
 
-    return nextTotal;
+    // Actualizar también el contador visible en la interfaz, sin esperar
+    // a que el jugador cierre sesión y vuelva a entrar.
+    if (this.profile) {
+      this.profile.total_points = savedProfile.total_points;
+    }
+
+    const pointsElement = document.getElementById("userPoints");
+    if (pointsElement) {
+      pointsElement.textContent = savedProfile.total_points;
+    }
+
+    return savedProfile.total_points;
   },
 
 
