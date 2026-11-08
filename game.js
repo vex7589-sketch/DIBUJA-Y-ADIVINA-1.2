@@ -91,18 +91,128 @@ const Game = {
 
 
   // ====================================================
+  // AUTENTICACIÓN Y PERFIL
+  // ====================================================
+
+  authMode: "login",
+  user: null,
+  profile: null,
+
+  showAuth() {
+    document.getElementById("authSection").hidden = false;
+    document.getElementById("appSection").hidden = true;
+  },
+
+  async handleSignedIn(user) {
+    this.user = user;
+    this.playerId = user.id;
+
+    const { data: profile, error } = await db
+      .from("profiles")
+      .select("id, username, total_points")
+      .eq("id", user.id)
+      .single();
+
+    if (error) {
+      console.error("Error cargando perfil:", error);
+      this.setAuthMessage("No se pudo cargar tu perfil. Intenta cerrar sesión y entrar de nuevo.");
+      this.showAuth();
+      return;
+    }
+
+    this.profile = profile;
+    document.getElementById("authSection").hidden = true;
+    document.getElementById("appSection").hidden = false;
+    document.getElementById("userName").textContent = profile.username;
+    document.getElementById("userPoints").textContent = profile.total_points;
+    this.setStatus("Sesión iniciada. ¡Ya puedes jugar!");
+  },
+
+  handleSignedOut() {
+    this.user = null;
+    this.profile = null;
+    this.playerId = null;
+    this.room = null;
+    this.role = null;
+    this.stopTimer();
+    this.showAuth();
+  },
+
+  setAuthMessage(message) {
+    const element = document.getElementById("authMessage");
+    if (element) element.textContent = message;
+  },
+
+  setupAuth() {
+    document.getElementById("toggleAuth")?.addEventListener("click", () => {
+      this.authMode = this.authMode === "login" ? "signup" : "login";
+      const signup = this.authMode === "signup";
+      document.getElementById("authTitle").textContent = signup ? "Crear cuenta" : "Iniciar sesión";
+      document.getElementById("authSubmit").textContent = signup ? "Registrarme" : "Iniciar sesión";
+      document.getElementById("toggleAuth").textContent = signup
+        ? "¿Ya tienes cuenta? Iniciar sesión"
+        : "¿No tienes cuenta? Crear cuenta";
+      document.getElementById("usernameGroup").hidden = !signup;
+      document.getElementById("authUsername").required = signup;
+      this.setAuthMessage("");
+    });
+
+    document.getElementById("authForm")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("authEmail").value.trim();
+      const password = document.getElementById("authPassword").value;
+      const username = document.getElementById("authUsername").value.trim();
+
+      const submit = document.getElementById("authSubmit");
+      submit.disabled = true;
+      this.setAuthMessage("Procesando...");
+
+      try {
+        if (this.authMode === "signup") {
+          if (!username) throw new Error("Escribe un nombre de jugador.");
+          const { data, error } = await db.auth.signUp({
+            email,
+            password,
+            options: { data: { username } }
+          });
+          if (error) throw error;
+
+          if (data.session) {
+            await this.handleSignedIn(data.user);
+          } else {
+            this.setAuthMessage("Cuenta creada. Ya puedes iniciar sesión.");
+            this.authMode = "login";
+            document.getElementById("authTitle").textContent = "Iniciar sesión";
+            document.getElementById("authSubmit").textContent = "Iniciar sesión";
+            document.getElementById("toggleAuth").textContent = "¿No tienes cuenta? Crear cuenta";
+            document.getElementById("usernameGroup").hidden = true;
+            document.getElementById("authUsername").required = false;
+          }
+        } else {
+          const { data, error } = await db.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          await this.handleSignedIn(data.user);
+        }
+      } catch (error) {
+        console.error(error);
+        this.setAuthMessage(error.message || "No se pudo completar el acceso.");
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    document.getElementById("logoutButton")?.addEventListener("click", async () => {
+      const { error } = await db.auth.signOut();
+      if (error) this.setAuthMessage(error.message);
+    });
+  },
+
+
+  // ====================================================
   // INICIAR
   // ====================================================
 
   async init() {
-
-    this.playerId =
-      crypto.randomUUID
-        ? crypto.randomUUID()
-        : Math.random()
-            .toString(36)
-            .substring(2) +
-          Date.now();
 
     this.canvas =
       document.getElementById("drawingCanvas");
@@ -118,8 +228,28 @@ const Game = {
     }
 
     this.setupControls();
+    this.setupAuth();
 
     this.updateTimerDisplay(60);
+
+    const { data: sessionData, error: sessionError } =
+      await db.auth.getSession();
+
+    if (sessionError) console.error(sessionError);
+
+    if (sessionData?.session?.user) {
+      await this.handleSignedIn(sessionData.session.user);
+    } else {
+      this.showAuth();
+    }
+
+    db.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        await this.handleSignedIn(session.user);
+      } else if (event === "SIGNED_OUT") {
+        this.handleSignedOut();
+      }
+    });
 
     console.log(
       "Juego iniciado:",
