@@ -838,6 +838,17 @@ const Game = {
 
       await this.connectRoom();
 
+      // Avisar al creador que ya entró el segundo jugador.
+      const { error: broadcastError } = await this.channel.send({
+        type: "broadcast",
+        event: "game_started",
+        payload: { room: updated }
+      });
+
+      if (broadcastError) {
+        console.error("No se pudo avisar el inicio por Broadcast:", broadcastError);
+      }
+
       this.updateUI();
 
       this.startTimer(
@@ -926,6 +937,37 @@ const Game = {
 
 
     // --------------------------------
+    // IMAGEN COMPLETA EN TIEMPO REAL
+    // --------------------------------
+
+    this.channel.on(
+      "broadcast",
+      { event: "snapshot" },
+      ({ payload }) => {
+        if (this.role === "guesser" && payload?.image) {
+          this.loadSnapshot(payload.image);
+        }
+      }
+    );
+
+
+    // --------------------------------
+    // PARTIDA INICIADA
+    // --------------------------------
+
+    this.channel.on(
+      "broadcast",
+      { event: "game_started" },
+      ({ payload }) => {
+        if (payload?.room) {
+          this.handleRoomUpdate(payload.room);
+          this.setStatus("¡El segundo jugador se ha unido! Ya pueden jugar.");
+        }
+      }
+    );
+
+
+    // --------------------------------
     // LIMPIAR
     // --------------------------------
 
@@ -1006,15 +1048,24 @@ const Game = {
     );
 
 
-    this.channel.subscribe(
-      status => {
+    await new Promise((resolve, reject) => {
+      let settled = false;
 
-        console.log(
-          "Realtime:",
-          status
-        );
-      }
-    );
+      this.channel.subscribe(status => {
+        console.log("Realtime:", status);
+
+        if (status === "SUBSCRIBED" && !settled) {
+          settled = true;
+          resolve();
+        } else if (
+          ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status) &&
+          !settled
+        ) {
+          settled = true;
+          reject(new Error("No se pudo conectar al canal Realtime: " + status));
+        }
+      });
+    });
   },
 
 
@@ -1603,6 +1654,38 @@ const Game = {
 
 
   // ====================================================
+  // SUMAR PUNTO AL PERFIL DEL GANADOR
+  // ====================================================
+
+  async awardProfilePoint() {
+    if (!this.playerId) {
+      throw new Error("No hay un usuario autenticado para guardar el punto.");
+    }
+
+    // El jugador ganador ejecuta esta función desde su propia sesión.
+    // Así se respeta la política RLS de profiles (auth.uid() = id).
+    const { data: profile, error: readError } = await db
+      .from("profiles")
+      .select("total_points")
+      .eq("id", this.playerId)
+      .single();
+
+    if (readError) throw readError;
+
+    const nextTotal = Number(profile.total_points || 0) + 1;
+
+    const { error: updateError } = await db
+      .from("profiles")
+      .update({ total_points: nextTotal })
+      .eq("id", this.playerId);
+
+    if (updateError) throw updateError;
+
+    return nextTotal;
+  },
+
+
+  // ====================================================
   // FINALIZAR RONDA
   // ====================================================
 
@@ -1766,6 +1849,16 @@ const Game = {
 
       this.room =
         data;
+
+      // Solo el dispositivo que ganó y consiguió actualizar round_version
+      // llega aquí; por eso el punto global se suma una sola vez.
+      try {
+        const total = await this.awardProfilePoint();
+        console.log("Punto guardado en profiles. Total:", total);
+      } catch (profileError) {
+        console.error("No se pudo actualizar profiles.total_points:", profileError);
+        this.setStatus("La ronda avanzó, pero no se pudo guardar el punto del perfil. Revisa la consola.");
+      }
 
 
       this.role =
