@@ -125,6 +125,16 @@ const Game = {
     document.getElementById("appSection").hidden = false;
     document.getElementById("userName").textContent = profile.username;
     document.getElementById("userPoints").textContent = profile.total_points;
+
+    // El canvas se inicializó mientras appSection estaba oculta.
+    // Esperar a que el navegador muestre la sección para medirlo correctamente.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this.prepareCanvas();
+        this.updateUI();
+      });
+    });
+
     this.setStatus("Sesión iniciada. ¡Ya puedes jugar!");
   },
 
@@ -323,6 +333,9 @@ const Game = {
 
     const rect =
       this.canvas.getBoundingClientRect();
+
+    // No inicializar el canvas con dimensiones cero si su sección está oculta.
+    if (!rect.width || !rect.height) return;
 
     const ratio =
       window.devicePixelRatio || 1;
